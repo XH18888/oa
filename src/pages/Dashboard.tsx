@@ -410,9 +410,6 @@ const DroppableColumn: React.FC<{ id: string; title: string; count: number; colo
 
   return (
     <div ref={setNodeRef} className={`${bgColor} p-4 rounded-lg h-full flex flex-col`}>
-      <h3 className={`font-semibold mb-4 ${titleColor} flex items-center justify-between`}>
-        {title} <Tag color={tagColor}>{count}</Tag>
-      </h3>
       <div className="space-y-3 overflow-y-auto max-h-[700px] pr-2">
         {children}
       </div>
