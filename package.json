@@ -1,6 +1,7 @@
 {
   "name": "trae-project",
   "private": true,
+  "homepage": "https://www.rorcc.com/oa/",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
