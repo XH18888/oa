@@ -273,20 +273,6 @@ const Dashboard: React.FC = () => {
           </Col>
         </Row>
 
-        <div className="mb-4">
-          <Segmented
-            block
-            size="large"
-            options={[
-              { label: `待处理 (${pendingTasks.length})`, value: 'pending', icon: <Clock size={16} /> },
-              { label: `进行中 (${inProgressTasks.length})`, value: 'in_progress', icon: <AlertCircle size={16} /> },
-              { label: `已完成 (${completedTasks.length})`, value: 'completed', icon: <CheckCircle size={16} /> },
-            ]}
-            value={activeStatus}
-            onChange={(value) => setActiveStatus(value as string)}
-          />
-        </div>
-
         <div className="w-full">
           {activeStatus === 'pending' && (
             <DroppableColumn id="pending" title="待处理" count={pendingTasks.length} color="gray">
