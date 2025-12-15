@@ -26,6 +26,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Create 404.html and .nojekyll
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
