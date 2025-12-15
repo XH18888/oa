@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Button, Tag, Avatar, Tooltip, Row, Col, Statistic, Empty, Spin, Modal, Form, Input, Select, DatePicker, message, Switch, Progress } from 'antd';
+import { Card, Button, Tag, Avatar, Tooltip, Row, Col, Statistic, Empty, Spin, Modal, Form, Input, Select, DatePicker, message, Switch, Progress, Segmented } from 'antd';
 import { Plus, CheckCircle, Clock, AlertCircle, Search, Filter, Calendar } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, DragEndEvent, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { supabase } from '../lib/supabase';
@@ -23,6 +23,7 @@ const Dashboard: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
   const [showMyTasksOnly, setShowMyTasksOnly] = useState(false);
+  const [activeStatus, setActiveStatus] = useState<string>('pending');
 
   // Dnd Sensors
   const sensors = useSensors(
@@ -241,7 +242,7 @@ const Dashboard: React.FC = () => {
 
         <Row gutter={16} className="mb-6">
           <Col span={8}>
-            <Card>
+            <Card onClick={() => setActiveStatus('pending')} className={`cursor-pointer transition-colors ${activeStatus === 'pending' ? 'border-blue-500' : ''}`}>
               <Statistic
                 title="待处理"
                 value={pendingTasks.length}
@@ -251,7 +252,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card>
+            <Card onClick={() => setActiveStatus('in_progress')} className={`cursor-pointer transition-colors ${activeStatus === 'in_progress' ? 'border-blue-500' : ''}`}>
               <Statistic
                 title="进行中"
                 value={inProgressTasks.length}
@@ -261,7 +262,7 @@ const Dashboard: React.FC = () => {
             </Card>
           </Col>
           <Col span={8}>
-            <Card>
+            <Card onClick={() => setActiveStatus('completed')} className={`cursor-pointer transition-colors ${activeStatus === 'completed' ? 'border-blue-500' : ''}`}>
               <Statistic
                 title="已完成"
                 value={completedTasks.length}
@@ -272,29 +273,43 @@ const Dashboard: React.FC = () => {
           </Col>
         </Row>
 
-        <Row gutter={24}>
-          <Col span={8}>
+        <div className="mb-4">
+          <Segmented
+            block
+            size="large"
+            options={[
+              { label: `待处理 (${pendingTasks.length})`, value: 'pending', icon: <Clock size={16} /> },
+              { label: `进行中 (${inProgressTasks.length})`, value: 'in_progress', icon: <AlertCircle size={16} /> },
+              { label: `已完成 (${completedTasks.length})`, value: 'completed', icon: <CheckCircle size={16} /> },
+            ]}
+            value={activeStatus}
+            onChange={(value) => setActiveStatus(value as string)}
+          />
+        </div>
+
+        <div className="w-full">
+          {activeStatus === 'pending' && (
             <DroppableColumn id="pending" title="待处理" count={pendingTasks.length} color="gray">
               {pendingTasks.map(task => (
                 <DraggableTaskCard key={task.id} task={task} onClick={() => navigate(`/task/${task.id}`)} />
               ))}
             </DroppableColumn>
-          </Col>
-          <Col span={8}>
+          )}
+          {activeStatus === 'in_progress' && (
             <DroppableColumn id="in_progress" title="进行中" count={inProgressTasks.length} color="blue">
               {inProgressTasks.map(task => (
                 <DraggableTaskCard key={task.id} task={task} onClick={() => navigate(`/task/${task.id}`)} />
               ))}
             </DroppableColumn>
-          </Col>
-          <Col span={8}>
+          )}
+          {activeStatus === 'completed' && (
             <DroppableColumn id="completed" title="已完成" count={completedTasks.length} color="green">
               {completedTasks.map(task => (
                 <DraggableTaskCard key={task.id} task={task} onClick={() => navigate(`/task/${task.id}`)} />
               ))}
             </DroppableColumn>
-          </Col>
-        </Row>
+          )}
+        </div>
         
         <Modal
           title="新建任务"
