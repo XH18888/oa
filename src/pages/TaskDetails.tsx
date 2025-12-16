@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, Tag, Button, Select, Spin, message, List, Avatar, Input, Form, Divider, Descriptions, Checkbox, Progress, Modal, Tooltip, DatePicker } from 'antd';
-import { ArrowLeft, Send, User, Calendar, Clock, AlertCircle, Plus, Trash2, Edit2, X, GripVertical, Check, XCircle } from 'lucide-react';
+import { ArrowLeft, Send, User, Calendar, Clock, AlertCircle, Plus, Trash2, Edit2, X, GripVertical, Check, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Task, Comment, Subtask, User as UserType } from '../types';
 import { useAuthStore } from '../store/authStore';
@@ -23,7 +23,10 @@ const SortableSubtaskItem = ({
   editValue, 
   setEditValue, 
   onSaveEdit, 
-  onCancelEdit 
+  onCancelEdit,
+  isDescriptionExpanded,
+  onToggleDescription,
+  onUpdateDescription
 }: any) => {
   const {
     attributes,
@@ -42,63 +45,86 @@ const SortableSubtaskItem = ({
     <div 
       ref={setNodeRef} 
       style={style} 
-      className="flex items-center justify-between group p-2 hover:bg-gray-50 rounded-md transition-colors bg-white mb-2 border border-gray-100"
+      className="group p-2 hover:bg-gray-50 rounded-md transition-colors bg-white mb-2 border border-gray-100"
     >
-      <div className="flex items-center gap-3 flex-grow">
-        <div {...attributes} {...listeners} className="cursor-move text-gray-400 hover:text-gray-600">
-          <GripVertical size={16} />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-grow">
+          <div {...attributes} {...listeners} className="cursor-move text-gray-400 hover:text-gray-600">
+            <GripVertical size={16} />
+          </div>
+          
+          {isEditing ? (
+            <div className="flex items-center gap-2 flex-grow">
+              <Input 
+                value={editValue} 
+                onChange={(e) => setEditValue(e.target.value)}
+                onPressEnter={() => onSaveEdit(subtask.id)}
+                autoFocus
+                size="small"
+              />
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<Check size={14} />} 
+                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={() => onSaveEdit(subtask.id)}
+              />
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<XCircle size={14} />} 
+                className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                onClick={onCancelEdit}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-grow">
+              <Checkbox 
+                checked={subtask.completed}
+                onChange={() => onToggle(subtask.id)}
+                className={subtask.completed ? 'line-through text-gray-400' : ''}
+              >
+                {subtask.title}
+              </Checkbox>
+              <Button
+                type="text"
+                size="small"
+                icon={isDescriptionExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                onClick={() => onToggleDescription(subtask.id)}
+                className="text-gray-400 hover:text-gray-600"
+              />
+            </div>
+          )}
         </div>
-        
-        {isEditing ? (
-          <div className="flex items-center gap-2 flex-grow">
-            <Input 
-              value={editValue} 
-              onChange={(e) => setEditValue(e.target.value)}
-              onPressEnter={() => onSaveEdit(subtask.id)}
-              autoFocus
-              size="small"
-            />
+
+        {!isEditing && (
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Button 
               type="text" 
               size="small" 
-              icon={<Check size={14} />} 
-              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={() => onSaveEdit(subtask.id)}
+              icon={<Edit2 size={14} />} 
+              onClick={() => onEdit(subtask)}
+              className="text-gray-400 hover:text-blue-500 mr-1"
             />
             <Button 
               type="text" 
+              danger 
               size="small" 
-              icon={<XCircle size={14} />} 
-              className="text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-              onClick={onCancelEdit}
+              icon={<Trash2 size={14} />} 
+              onClick={() => onDelete(subtask.id)}
             />
           </div>
-        ) : (
-          <Checkbox 
-            checked={subtask.completed}
-            onChange={() => onToggle(subtask.id)}
-            className={subtask.completed ? 'line-through text-gray-400' : ''}
-          >
-            {subtask.title}
-          </Checkbox>
         )}
       </div>
-
-      {!isEditing && (
-        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button 
-            type="text" 
-            size="small" 
-            icon={<Edit2 size={14} />} 
-            onClick={() => onEdit(subtask)}
-            className="text-gray-400 hover:text-blue-500 mr-1"
-          />
-          <Button 
-            type="text" 
-            danger 
-            size="small" 
-            icon={<Trash2 size={14} />} 
-            onClick={() => onDelete(subtask.id)}
+      
+      {isDescriptionExpanded && (
+        <div className="ml-9 mt-2 pr-12">
+          <Input.TextArea 
+            placeholder="添加子任务描述..."
+            value={subtask.description || ''}
+            onChange={(e) => onUpdateDescription(subtask.id, e.target.value)}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+            className="text-gray-600 text-sm"
           />
         </div>
       )}
@@ -126,6 +152,7 @@ const TaskDetails: React.FC = () => {
   // Subtask editing state
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editSubtaskTitle, setEditSubtaskTitle] = useState('');
+  const [expandedSubtasks, setExpandedSubtasks] = useState<Set<string>>(new Set());
 
   // DnD sensors
   const sensors = useSensors(
@@ -703,6 +730,43 @@ const TaskDetails: React.FC = () => {
     }
   };
 
+  const toggleSubtaskDescription = (subtaskId: string) => {
+    setExpandedSubtasks(prev => {
+      const next = new Set(prev);
+      if (next.has(subtaskId)) {
+        next.delete(subtaskId);
+      } else {
+        next.add(subtaskId);
+      }
+      return next;
+    });
+  };
+
+  const updateSubtaskDescription = async (subtaskId: string, description: string) => {
+    if (!task || !task.subtasks) return;
+
+    const updatedSubtasks = task.subtasks.map(st => 
+      st.id === subtaskId ? { ...st, description } : st
+    );
+
+    // Optimistic update
+    setTask({ ...task, subtasks: updatedSubtasks });
+
+    // Debounced update could be better here, but for simplicity we update directly
+    // In a real app, you might want to use useDebounce for the API call
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ subtasks: updatedSubtasks })
+        .eq('id', task.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating subtask description:', error);
+      // message.error('更新描述失败'); // Optional: show error only on failure
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'red';
@@ -794,6 +858,9 @@ const TaskDetails: React.FC = () => {
                         setEditValue={setEditSubtaskTitle}
                         onSaveEdit={saveEditSubtask}
                         onCancelEdit={cancelEditSubtask}
+                        isDescriptionExpanded={expandedSubtasks.has(subtask.id)}
+                        onToggleDescription={toggleSubtaskDescription}
+                        onUpdateDescription={updateSubtaskDescription}
                       />
                     ))}
                   </SortableContext>
